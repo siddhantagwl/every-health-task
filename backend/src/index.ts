@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 
 import { db, initializeDB } from "./db/db";
+import { insertTestLog, countLogs } from "./logs";
 
 const app = express();
 
@@ -13,14 +14,9 @@ app.get("/hello", (req, res) => {
 });
 
 app.get("/db-check", (req, res) => {
-    const now = new Date().toISOString();
-    const insert = db.prepare(`
-        INSERT INTO logs (timestamp, source, severity, message, created_at)
-        VALUES (?, ?, ?, ?, ?)
-    `);
-    insert.run(now, "demo", "info", "SQLite test", now);
-    const row = db.prepare(`SELECT COUNT(*) as count FROM logs`).get() as { count: number };
-    res.json({ success: true, total: row.count });
+    insertTestLog();
+    const total = countLogs();
+    res.json({ success: true, total });
 });
 
 
