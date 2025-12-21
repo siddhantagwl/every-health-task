@@ -2,7 +2,8 @@ import express from "express";
 import cors from "cors";
 
 import { db, initializeDB } from "./db/db";
-import { insertTestLog, countLogs, listLogs } from "./logs";
+import { insertTestLog, countLogs, listLogsFiltered, getLogStatistics, insertLogsToDB, buildRowsForInsert } from "./logs";
+import { isSeverity, type Severity } from "./severity";
 
 const app = express();
 
@@ -40,15 +41,77 @@ app.get("/logs", (req, res) => {
         return res.status(400).json({error: "Invalid limit format."});
     }
 
-    const rows = listLogs(limit);
+    // user params
+    const severityRaw = req.query.severity;
+    const fromRaw = req.query.from;
+    const toRaw = req.query.to;
 
+    // sanitize params
+    let severity: Severity | undefined;
+
+    if (typeof severityRaw === "string") {
+        if (!isSeverity(severityRaw)) {
+            return res.status(400).json({
+                error: `Invalid severity. Allowed: debug, info, warning, error.`,
+            });
+        }
+
+        severity = severityRaw;
+    } else if (severityRaw !== undefined) {
+        return res.status(400).json({ error: "Invalid severity format." });
+    }
+
+    // const severity = typeof severityRaw === "string" ? severityRaw : undefined;
+    const from = typeof fromRaw === "string" ? fromRaw : undefined;
+    const to = typeof toRaw === "string" ? toRaw : undefined;
+
+    try {
+        const rows = listLogsFiltered({ severity, from, to, limit });
+        return res.json({ logs: rows, count: rows.length, limit });
+    } catch (e) {
+        return res.status(400).json({
+            error: e instanceof Error ? e.message : "Invalid query parameters",
+        });
+    }
+});
+
+app.get("/logs/stats", (req, res) => {
+    const stats = getLogStatistics();
+    res.json(stats);
+});
+
+app.post("/logs/test-batch", (req, res) => {
+    const now = new Date().toISOString();
+
+    const inserted = insertLogsToDB([
+        { timestamp: now, source: "demo", severity: "info", message: "batch 1", created_at: now },
+        { timestamp: now, source: "demo", severity: "warning", message: "batch 2", created_at: now },
+        { timestamp: now, source: "demo", severity: "error", message: "batch 3", created_at: now },
+    ]);
+
+    res.json({ sucess:true, inserted:inserted });
+});
+
+app.post("/logs/ingest", (req, res) => {
+    const logs = req.body?.logs;
+
+    // validate body
+    if (!Array.isArray(logs)) {
+        return res.status(400).json({ error: "Body must be of following type { logs: [...] }" });
+    }
+
+    const { rows, errors } = buildRowsForInsert(logs);
+    const inserted = insertLogsToDB(rows);
+
+    // respond with summary, errors and inserted count
     return res.json({
-        logs: rows,
-        countt: rows.length,
-        limit,
+        inserted: inserted,
+        failed: errors.length,
+        errors: errors,
     });
 });
 
+// ############## start server ##############
 const PORT = process.env.PORT ? Number(process.env.PORT) : 5000;
 
 initializeDB();
