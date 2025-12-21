@@ -8,20 +8,17 @@ import { isSeverity, type Severity } from "./severity";
 const app = express();
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json( {limit: "1mb"} )); // todo: awhat if large payloads ?
 
-app.get("/hello", (req, res) => {
-    res.json({ hello: true });
-});
+// ############## routes ##############
 
-app.get("/db-check", (req, res) => {
-    insertTestLog();
-    const total = countLogs();
-    res.json({ success: true, total });
-});
+const MAX_LOGS_PER_INGEST = 10_000;
+
 
 app.get("/logs", (req, res) => {
     const limitRaw = req.query.limit;
+
+    console.log("Query params:", req.query); // debug
 
     const DEFAULT_LIMIT = 50;
     let limit = DEFAULT_LIMIT;
@@ -75,21 +72,10 @@ app.get("/logs", (req, res) => {
     }
 });
 
+// todo: move this to a proper route file
 app.get("/logs/stats", (req, res) => {
     const stats = getLogStatistics();
     res.json(stats);
-});
-
-app.post("/logs/test-batch", (req, res) => {
-    const now = new Date().toISOString();
-
-    const inserted = insertLogsToDB([
-        { timestamp: now, source: "demo", severity: "info", message: "batch 1", created_at: now },
-        { timestamp: now, source: "demo", severity: "warning", message: "batch 2", created_at: now },
-        { timestamp: now, source: "demo", severity: "error", message: "batch 3", created_at: now },
-    ]);
-
-    res.json({ sucess:true, inserted:inserted });
 });
 
 app.post("/logs/ingest", (req, res) => {
@@ -98,6 +84,12 @@ app.post("/logs/ingest", (req, res) => {
     // validate body
     if (!Array.isArray(logs)) {
         return res.status(400).json({ error: "Body must be of following type { logs: [...] }" });
+    }
+
+    if (logs.length > MAX_LOGS_PER_INGEST) {
+        return res.status(400).json({
+            error: `Too many log entries. Max allowed is ${MAX_LOGS_PER_INGEST}.`,
+        });
     }
 
     const { rows, errors } = buildRowsForInsert(logs);
@@ -109,6 +101,32 @@ app.post("/logs/ingest", (req, res) => {
         failed: errors.length,
         errors: errors,
     });
+});
+
+// ############# dummy routes for testing - to be ignored  ##############
+// for testing purposes
+app.get("/hello", (req, res) => {
+    res.json({ hello: true });
+});
+
+// for testing purposes
+app.get("/db-check", (req, res) => {
+    insertTestLog();
+    const total = countLogs();
+    res.json({ success: true, total });
+});
+
+// for testing purposes
+app.post("/logs/test-batch", (req, res) => {
+    const now = new Date().toISOString();
+
+    const inserted = insertLogsToDB([
+        { timestamp: now, source: "demo", severity: "info", message: "batch 1", created_at: now },
+        { timestamp: now, source: "demo", severity: "warning", message: "batch 2", created_at: now },
+        { timestamp: now, source: "demo", severity: "error", message: "batch 3", created_at: now },
+    ]);
+
+    res.json({ sucess:true, inserted:inserted });
 });
 
 // ############## start server ##############

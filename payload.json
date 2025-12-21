@@ -1,0 +1,86 @@
+[
+  {
+    "timestamp": "2025-12-21T14:25:43Z",
+    "source": "patient-monitoring",
+    "severity": "info",
+    "message": "Patient vitals recorded successfully",
+    "patient_id": "pt001"
+  },
+  {
+    "timestamp": "2025-12-21T14:26:15Z",
+    "source": "medication-service",
+    "severity": "warning",
+    "message": "Medication dosage approaching maximum daily limit",
+    "patient_id": "pt002"
+  },
+  {
+    "timestamp": "2025-12-21T14:27:02Z",
+    "source": "lab-results",
+    "severity": "error",
+    "message": "Critical lab value detected - immediate attention required",
+    "patient_id": "pt003"
+  },
+  {
+    "timestamp": "2025-12-21T14:27:33Z",
+    "source": "appointment-system",
+    "severity": "info",
+    "message": "Patient checked in for scheduled consultation",
+    "patient_id": "pt004"
+  },
+  {
+    "timestamp": "2025-12-21T14:28:10Z",
+    "source": "emergency-alerts",
+    "severity": "error",
+    "message": "Patient fall detected in room 205",
+    "patient_id": "pt005"
+  },
+  {
+    "timestamp": "2025-12-21T14:29:45Z",
+    "source": "medication-service",
+    "severity": "debug",
+    "message": "Prescription refill reminder sent",
+    "patient_id": "pt006"
+  },
+  {
+    "timestamp": "2025-12-21T14:30:12Z",
+    "source": "vital-monitors",
+    "severity": "warning",
+    "message": "Heart rate elevated beyond normal range",
+    "patient_id": "pt007"
+  },
+  {
+    "timestamp": "2025-12-21T14:31:08Z",
+    "source": "imaging-service",
+    "severity": "info",
+    "message": "X-ray scan completed and uploaded to patient record",
+    "patient_id": "pt008"
+  },
+  {
+    "timestamp": "2025-12-21T14:32:22Z",
+    "source": "allergy-alerts",
+    "severity": "error",
+    "message": "Potential drug allergy interaction detected",
+    "patient_id": "pt009"
+  },
+  {
+    "timestamp": "2025-12-21T14:33:01Z",
+    "source": "discharge-planning",
+    "severity": "info",
+    "message": "Patient discharge documentation completed",
+    "patient_id": "pt010"
+  },
+  {
+    "timestamp": "2025-12-21T14:34:15Z",
+    "source": "telemedicine",
+    "severity": "debug",
+    "message": "Remote consultation session initiated",
+    "patient_id": "pt011"
+  },
+  {
+    "timestamp": "2025-12-21T14:35:40Z",
+    "source": "surgical-scheduler",
+    "severity": "warning",
+    "message": "Operating room availability conflict detected",
+    "patient_id": "pt012"
+  }
+]

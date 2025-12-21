@@ -7,7 +7,7 @@ export type LogRow = {
     timestamp: string; //lexicographicly sortable timestamp
     source: string;
     severity: string;
-    message: string;
+    message: string; // todo: what if msg contains sensitive info ?? like dob, name, ssn, etc
     created_at: string;
 };
 
@@ -33,14 +33,12 @@ export type IngestError = { index: number; err: string };
 
 // ##### log operations #####
 
+// quick test function
 export function insertTestLog(): void {
     const now = new Date().toISOString();
-
     const insert = db.prepare(`
-        INSERT INTO logs (timestamp, source, severity, message, created_at)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO logs (timestamp, source, severity, message, created_at) VALUES (?, ?, ?, ?, ?)
     `);
-
     insert.run(now, "demo", "debug", "SQLite test", now);
 }
 
@@ -56,15 +54,13 @@ export function listLogs(limit: number): LogRow[] {
     const safeLimit = Math.max(1, Math.min(limit, MAX_LIMIT));
 
     const query = db.prepare(`
-        SELECT id, timestamp, source, severity, message, created_at
-        FROM logs
-        ORDER BY id DESC
-        LIMIT ?
+        SELECT id, timestamp, source, severity, message, created_at FROM logs ORDER BY created_at DESC, id DESC LIMIT ?
     `);
 
     return query.all(safeLimit) as LogRow[];
 }
 
+// todo: wathc out for utc related stuff ??
 function isIsoDateString(value: string): boolean {
     // validate iso string
     const t = Date.parse(value);
@@ -77,6 +73,7 @@ export function listLogsFiltered(filters: LogFilters): LogRow[] {
     const sqlConditions: string[] = [];
     const params: unknown[] = [];
 
+    // todo: can think of more efficient ways later (cleaner too)
     if (filters.severity) {
         sqlConditions.push("severity = ?");
         params.push(filters.severity);
@@ -101,11 +98,7 @@ export function listLogsFiltered(filters: LogFilters): LogRow[] {
     const whereSql = sqlConditions.length ? `WHERE ${sqlConditions.join(" AND ")}` : "";
 
     const query = db.prepare(`
-        SELECT id, timestamp, source, severity, message, created_at
-        FROM logs
-        ${whereSql}
-        ORDER BY timestamp DESC, id DESC
-        LIMIT ?
+        SELECT id, timestamp, source, severity, message, created_at FROM logs ${whereSql} ORDER BY created_at DESC, id DESC LIMIT ?
     `);
 
     return query.all(...params, safeLimit) as LogRow[];
@@ -138,8 +131,7 @@ export function insertLogsToDB(rows: NewLogRow[]): number {
     if (rows.length === 0) return 0;
 
     const query = db.prepare(`
-        INSERT INTO logs (timestamp, source, severity, message, created_at)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO logs (timestamp, source, severity, message, created_at) VALUES (?, ?, ?, ?, ?)
     `);
 
     const transaction = db.transaction((items: NewLogRow[]) => {
@@ -156,10 +148,14 @@ export function buildRowsForInsert(logs: any[]): { rows: NewLogRow[]; errors: In
     const rows: NewLogRow[] = [];
     const errors: IngestError[] = [];
     const createdAt = new Date().toISOString();
+    const safeLogs = logs.slice(0, 10_000); // max rows to process at once, defensive
 
-    for (let i = 0; i < logs.length; i++) {
-        const log = logs[i];
+    console.log(`Processing ${safeLogs.length} logs for ingestion`);
 
+    for (let i = 0; i < safeLogs.length; i++) {
+        const log = safeLogs[i];
+
+        // todo: maybe validate more strictly later or move it out ?
         if (!log || typeof log !== "object") {
             errors.push({ index: i, err: "Log must be an object" });
             continue;
@@ -187,15 +183,17 @@ export function buildRowsForInsert(logs: any[]): { rows: NewLogRow[]; errors: In
             continue;
         }
 
+        const normalizedTimestamp = new Date(timestamp).toISOString();
+
         // valdation passed - now push it to rows without patient_id
         rows.push({
-            timestamp,
+            timestamp: normalizedTimestamp,
             source,
             severity: severity as Severity,
             message,
             created_at: createdAt,
         });
     }
-
+    console.log(`inserted ${rows.length} valid logs, ${errors.length} errors`);
     return { rows, errors };
 }
