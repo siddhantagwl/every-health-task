@@ -1,5 +1,7 @@
 # Every Health: Health Logs Monitor
 
+![Demo](demo_recording.gif)
+
 ## Features
 
 - Upload a JSON file containing an array of log entries
